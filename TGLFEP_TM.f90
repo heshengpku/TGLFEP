@@ -1,0 +1,170 @@
+subroutine TGLFEP_TM
+
+  use mpi
+  use tglf_interface
+  use tglf_pkg
+  use TGLFEP_interface
+
+  implicit none
+  integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
+
+  call MPI_COMM_RANK(TGLFEP_COMM,id,ierr)
+  call MPI_COMM_SIZE(TGLFEP_COMM,np,ierr)
+
+  call tglf_init('',TGLFEP_COMM)
+
+  call TGLFEP_tglf_map
+
+  tglf_use_transport_model_in = .true.
+
+  tglf_ns_in = ns
+
+  tglf_kygrid_model_in = 0
+  tglf_ky_in           = ky
+  tglf_nky_in          = nky
+
+  tglf_nmodes_in = nmodes
+
+  tglf_nbasis_min_in = 32
+  tglf_nbasis_max_in = 32
+  tglf_nxgrid_in     = 32
+  
+  tglf_width_in      = width_in
+  tglf_find_width_in = .false.
+  
+  call tglf_run_mpi
+
+  if(id .eq. 0) then
+    print *,scan_factor&
+           ,tglf_elec_pflux_out,tglf_ion_pflux_out(1),tglf_ion_pflux_out(2)&
+           ,tglf_elec_eflux_out,tglf_ion_eflux_out(1),tglf_ion_eflux_out(2)
+
+    call write_eigenvalue_spectrum
+
+    call write_flux_spectrum
+
+    !call write_potential_spectrum
+  endif
+
+end subroutine TGLFEP_TM
+
+subroutine write_eigenvalue_spectrum
+
+  use tglf_pkg
+  use TGLFEP_interface
+
+  implicit none
+  character(17) :: str_file
+  integer :: i,n
+  real :: ky_out,growthrate_out(nmodes),frequency_out(nmodes)
+   
+  write(str_file,'(A16,I1)')'out.eigenvalue_m',mode_flag_in
+  open(unit=33,file=trim(str_file//suffix),status='replace')
+
+  write(33,*)"gyro-bohm normalized eigenvalue spectra for mode_flag ",&
+              mode_flag_in,"factor ",factor_in,"width ",width_in
+  write(33,*)"ky,(gamma(n),freq(n),n=1,nmodes_in)"
+  do i=1,nky
+    ky_out = get_ky_spectrum_out(i)
+    do n=1,nmodes
+      growthrate_out(n) = get_eigenvalue_spectrum_out(1,i,n)
+      frequency_out(n) = get_eigenvalue_spectrum_out(2,i,n)
+    enddo
+    write(33,10)ky_out,(growthrate_out(n),frequency_out(n),n=1,nmodes)
+  enddo
+
+  close(33)
+
+10 format(F8.4,8F12.7)
+
+end subroutine write_eigenvalue_spectrum
+
+subroutine write_flux_spectrum
+
+  use tglf_pkg
+  use TGLFEP_interface
+
+  implicit none
+  character(11) :: str_file
+  logical :: i_flux2=.false.
+  integer :: i,j,is,imax,jmax
+  real :: dky
+  real :: dky0,dky1,ky0,ky1
+  real :: pflux0,eflux0,pflux1,eflux1
+  real :: pflux_out,eflux_out
+
+  write(str_file,'(A10,I1)')'out.flux_m',mode_flag_in
+  open(unit=33,file=trim(str_file//suffix),status='replace')
+
+  do is=1,ns
+    do j=1,2
+      write(33,*)"species = ",is,"field =",j
+      write(33,*)"ky,particle flux,energy flux"
+
+      pflux0 = 0.0
+      eflux0 = 0.0
+
+      dky0=0.0
+      ky0=0.0
+      dky = get_ky_spectrum_out(1)
+      do i=1,nky
+        ky1 = get_ky_spectrum_out(i)
+        if(i.eq.1)then
+          dky1=ky1
+        else
+          dky = LOG(ky1/ky0)/(ky1-ky0)
+          dky1 = ky1*(1.0 - ky0*dky)
+          dky0 = ky0*(ky1*dky - 1.0)
+        endif
+
+        pflux1 = 0.0
+        eflux1 = 0.0
+        do imax = 1,nmodes
+          pflux1 = pflux1 + get_flux_spectrum_out(1,is,j,i,imax)
+          eflux1 = eflux1 + get_flux_spectrum_out(2,is,j,i,imax)
+        enddo
+        pflux_out = dky0*pflux0 + dky1*pflux1
+        eflux_out = dky0*eflux0 + dky1*eflux1
+        write(33,10)ky1,pflux_out,eflux_out
+        pflux0 = pflux1
+        eflux0 = eflux1
+        ky0 = ky1
+      enddo  ! i
+    enddo  ! j
+  enddo  ! is
+
+  close(33)
+
+10 format(F8.4,2F12.7)
+
+end subroutine write_flux_spectrum
+
+subroutine write_potential_spectrum
+
+  use tglf_pkg
+  use TGLFEP_interface
+
+  implicit none
+  character(16) :: str_file
+  integer :: i,n
+  real :: phi
+
+  write(str_file,'(A15,I1)')'out.potential_m',mode_flag_in
+  open(unit=33,file=trim(str_file//suffix),status='replace')
+
+  write(33,*)"gyro-bohm normalized potential fluctuation amplitude spectra"
+  write(33,*)"ky,potential"
+  do i=1,nky
+    phi = 0.0
+    do n = 1,nmodes
+      phi = phi + get_field_spectrum_out(2,i,n)
+    enddo
+    phi = sqrt(phi)
+    write(33,10)get_ky_spectrum_out(i),phi
+  enddo
+
+  close(33)
+
+ 10 format(F8.4,F12.7)
+
+end subroutine write_potential_spectrum
