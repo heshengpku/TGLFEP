@@ -1,8 +1,13 @@
+!------------------------------------------------------------
+! TGLFEP_ky.f90
+!
+! PURPOSE:
+!  Calculate the growth rate and frequency at a single ky
+!------------------------------------------------------------
+
 subroutine TGLFEP_ky
 
-  use mpi
   use tglf_interface
-  use tglf_pkg
   use TGLFEP_interface
 
   implicit none

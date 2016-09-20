@@ -30,7 +30,6 @@ OBJECTS = TGLFEP_interface.o\
           TGLFEP_ky.o\
           TGLFEP_TM.o\
           TGLFEP_ky_widthscan.o\
-          TGLFEP_nEPscan.o\
           TGLFEP_ky_nEPscan.o\
           TGLFEP_bisection.o\
           TGLFEP_scalefactor.o\

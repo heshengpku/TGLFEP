@@ -1,3 +1,11 @@
+!------------------------------------------------------------
+! TGLFEP_ky_widthscan.f90
+!
+! PURPOSE:
+!  Calculate the growth rate and frequency vs width
+!  Find the suitable width for max gamma_AE
+!------------------------------------------------------------
+
 subroutine TGLFEP_ky_widthscan
 
   use mpi
@@ -10,14 +18,14 @@ subroutine TGLFEP_ky_widthscan
   logical :: iexist
   character(19) :: str_file
   integer :: i,n
-  integer,parameter :: nwidth=80
-  real :: width_min=1.2,width_max=1.99
+  integer,parameter :: nwidth=50
+  real :: width_min=0.8,width_max=1.29
   real,dimension(nwidth) :: width
-  !data width /-1.0, -0.5, -0.2, 0.2, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0/
   real,dimension(nwidth,nmodes) :: growthrate,growthrate_out &
                                   ,frequency,frequency_out
   real :: w,g(nmodes),f(nmodes)
   logical :: find_max
+  real :: gmark,fmark
 
   call MPI_COMM_RANK(TGLFEP_COMM,id,ierr)
   call MPI_COMM_SIZE(TGLFEP_COMM,np,ierr)
@@ -34,7 +42,6 @@ subroutine TGLFEP_ky_widthscan
   do i = 1+id,nwidth,np
 
     width_in = width(i)
-    !shat_factor = width(i)
 
     call TGLFEP_ky
 
@@ -88,7 +95,7 @@ subroutine TGLFEP_ky_widthscan
   find_max = .true. 
   !find_max = .false.
   if(find_max) then
-    width_in = width_min - 0.01
+    width_in = width_min !- 0.01
     gmark = 0.0
     fmark = 0.0
     do i = 1,nwidth

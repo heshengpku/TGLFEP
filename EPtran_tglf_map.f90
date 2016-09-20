@@ -12,12 +12,9 @@ subroutine EPtran_tglf_map
   use EPtran_to_tglf
 
   implicit none
-  !integer :: ir = 26
 
-  if(ir .lt. 1 .or. ir .gt. 51) then
-    write(*,*) 'ir must be 1<=ir<=nr=51'
-    ir = 26
-  endif
+  if(ir .lt. 1 .or. ir .gt. 51) ir = 26 !r/a = 0.5, default
+
   ! if(mode_flag_in .lt. 1 .or. mode_flag_in .gt. 4) then
   !   write(*,*) 'mode_flag_in must be 1. EP+ITG/TEM drive'
   !   write(*,*) '                  2. EP drive only'
@@ -126,9 +123,8 @@ subroutine EPtran_tglf_map
     tglf_filter_in = 2.0
   endif
 
-  !ky_in = n_toroidal/3.*q_factor*kymark(ir)
   ky_in = n_toroidal*tglf_q_loc_in/tglf_rmin_loc_in*rho_star(ir) !ky = n*q/(r/a)*rho_star
-  !ky_in = n_toroidal*0.1*tglf_zs_in(3)/sqrt(tglf_mass_in(3)*tglf_taus_in(3))
+  !ky_in = n_toroidal*0.1*tglf_zs_in(3)/sqrt(tglf_mass_in(3)*tglf_taus_in(3)) !ky_ep = 0.1*n
   freq_AE_upper = freq_cutoff/q_factor*omega_TAE(ir) !freq_cutoff*omega_TAE
   
 end subroutine EPtran_tglf_map

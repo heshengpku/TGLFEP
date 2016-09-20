@@ -1,12 +1,20 @@
+!------------------------------------------------------------
+! TGLFEP_TM.f90
+!
+! PURPOSE:
+!  Calculate the growth rate and frequency spectra
+!  Print out the fluxes if needed
+!------------------------------------------------------------
+
 subroutine TGLFEP_TM
 
   use mpi
   use tglf_interface
-  use tglf_pkg
   use TGLFEP_interface
 
   implicit none
   integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
+  logical :: write_flux_flag = .false.
 
   call MPI_COMM_RANK(TGLFEP_COMM,id,ierr)
   call MPI_COMM_SIZE(TGLFEP_COMM,np,ierr)
@@ -35,15 +43,18 @@ subroutine TGLFEP_TM
   call tglf_run_mpi
 
   if(id .eq. 0) then
-    print *,scan_factor&
-           ,tglf_elec_pflux_out,tglf_ion_pflux_out(1),tglf_ion_pflux_out(2)&
-           ,tglf_elec_eflux_out,tglf_ion_eflux_out(1),tglf_ion_eflux_out(2)
 
     call write_eigenvalue_spectrum
 
-    call write_flux_spectrum
+    if(write_flux_flag) then
+      print *,scan_factor&
+             ,tglf_elec_pflux_out,tglf_ion_pflux_out(1),tglf_ion_pflux_out(2)&
+             ,tglf_elec_eflux_out,tglf_ion_eflux_out(1),tglf_ion_eflux_out(2)
+      call write_flux_spectrum
+    endif
 
-    !call write_potential_spectrum
+    ! call write_potential_spectrum
+    
   endif
 
 end subroutine TGLFEP_TM
@@ -86,7 +97,6 @@ subroutine write_flux_spectrum
 
   implicit none
   character(11) :: str_file
-  logical :: i_flux2=.false.
   integer :: i,j,is,imax,jmax
   real :: dky
   real :: dky0,dky1,ky0,ky1

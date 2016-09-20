@@ -16,14 +16,19 @@ program TGLFEP_driver
    
   integer :: id, np, color, key, ierr, STATUS(MPI_STATUS_SIZE)
   integer :: TGLFEP_COMM_IN
+
   logical :: multiple_flag = .true.
-  integer :: scan_mode_flag = 1 !1 = radial, 2 = safety factor q, 3 = shear s, 4 = other scan
-  integer :: scan_n = 25 !just scan one at one time. !q_scan_n = 8, shat_scan_n = 9
+  integer :: scan_mode_flag = 1 !1 = radial, 2 = safety factor q, 3 = shear s
+  integer :: scan_n = 50 !just scan one parameter at one time.
+             !q scan = 13, shat scan = 9 for GA-std case
+             !radial scan for DIII-D NBI (GYRO inputs) = 17
+             !radial scan for EPtran = 50 (r/a = 0 excluded)
   character(2) :: str_r
-  real :: q_data(8)
-  data q_data /0.5, 1.0, 1.5, 2.0, 2.5/
-  !data q_data /0.55, 0.625, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0/
-  !data q_data /0.875, 1.125, 1.375, 1.625, 1.875/
+
+  !The q and s scan factor for GA-std case (where STD q = 2 and s = 1)
+  real :: q_data(13)
+  data q_data /0.55, 0.625, 0.75, 0.875, 1.0, 1.125, 1.25, &
+               1.375, 1.5, 1.625, 1.75, 1.875, 2.0/
   real :: shat_data(9)
   data shat_data /-1.0, -0.5, -0.2, 0.2, 0.5, 1.0, 1.5, 2.0, 2.5/
 
@@ -45,7 +50,8 @@ program TGLFEP_driver
   factor_in = 1.0
   !width_in = 1.87
 
-  !ir = 9 !r/a = 0.5
+  !ir = 11 !DIII-D NBI case with GYRO inputs at r/a = 0.6
+  !ir = 26 !EPtran inputs at r/a = 0.5
 
   if(multiple_flag) then
 
@@ -55,19 +61,26 @@ program TGLFEP_driver
 
     select case(scan_mode_flag)
     case(1)
-      ir = color + 11
+      ir = color + 1
+
+      !if(ir .gt. 41) then
+      !  factor_in = 8.0
+      !else
+      !  factor_in = 4.0
+      !endif
+
       !factor_in = factor(ir)
       !width_in = width(ir)
+
       str_r = achar(ir/10+iachar("0"))//achar(mod(ir,10)+iachar("0"))
       write(suffix,'(A2,A2)')'_r',str_r
     case(2)
       q_factor = q_data(color+1)
-      write(suffix,'(A2,F4.2)')'_q',q_factor
+      write(suffix,'(A2,F5.3)')'_q',q_factor
     case(3)
       shat_factor = shat_data(color+1)
       write(suffix,'(A2,SP,F4.1)')'_s',shat_factor
     case(4)
-      !scan_factor = real(color)*0.5
       scan_factor = real(color+1)/10.0
       write(suffix,'(A2,F3.1)')'_c',scan_factor
     end select

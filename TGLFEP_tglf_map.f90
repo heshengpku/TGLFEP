@@ -1,7 +1,7 @@
 subroutine TGLFEP_tglf_map 
 
   implicit none
-  integer :: model_in = 0
+  integer :: model_in = 2
 
   select case(model_in)
   case(0)

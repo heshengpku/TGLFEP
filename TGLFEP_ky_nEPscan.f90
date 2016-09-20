@@ -1,3 +1,10 @@
+!------------------------------------------------------------
+! TGLFEP_ky_nEPscan.f90
+!
+! PURPOSE:
+!  Calculate the growth rate and frequency vs nEP
+!------------------------------------------------------------
+
 subroutine TGLFEP_ky_nEPscan
 
   use mpi
@@ -19,7 +26,7 @@ subroutine TGLFEP_ky_nEPscan
 
   do i = 1,nfactor
     !factor(i) = real(i)/real(nfactor)
-    !factor(i) = 0.5*i
+    !factor(i) = 0.5*i/0.025*0.001
     factor(i) = real(i)/10.0
   enddo
 

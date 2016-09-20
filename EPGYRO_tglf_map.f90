@@ -19,6 +19,8 @@ subroutine EPGYRO_tglf_map
                         kappa,s_kappa,delta,s_delta,zeta,s_zeta,  &
                         q,shear,rho_star,zeff,                    &
                         q_prime,p_prime,omega_TAE
+
+  ! GYRO inputs
   data rmin &
   /0.1,0.15,0.2,0.25,0.3,0.35, &
    0.4,0.45,0.5,0.55,0.6,0.65, &
@@ -131,6 +133,8 @@ subroutine EPGYRO_tglf_map
   zmaj  = 0.0
   dzmaj = 0.0
 
+  if(ir .lt. 1 .or. ir .gt. 17) ir = 11 !r/a = 0.6, default
+
   !if(mode_flag_in .lt. 1 .or. mode_flag_in .gt. 4) then
   !  write(*,*) 'mode_flag must be 1. EP+ITG/TEM drive'
   !  write(*,*) '                  2. EP drive only'
@@ -150,13 +154,8 @@ subroutine EPGYRO_tglf_map
   tglf_mass_in(2) = 1.0
   tglf_mass_in(3) = 1.0
 
-  tglf_use_bper_in = .true.
-
   tglf_geometry_flag_in = 1  ! Miller 
-
-  if(ir .lt. 1) ir = 1
-  if(ir .gt. nr) ir = 11
-  !r1
+  
   tglf_taus_in(1) = 1.0
   tglf_taus_in(2) = taus_2(ir)
   tglf_taus_in(3) = taus_3(ir)
@@ -231,6 +230,8 @@ subroutine EPGYRO_tglf_map
                         as_3(ir)*taus_3(ir)*(rlns_3(ir)+rlts_3(ir)))  
                         ! The negative sign comfirmed by Gary 7.13.2016
   !----------------------------------------------------------------
+
+  tglf_use_bper_in = .true.
   tglf_betae_in = betae(ir)
 
   tglf_xnue_in = 0.
@@ -241,9 +242,7 @@ subroutine EPGYRO_tglf_map
   endif
 
   ky_in = n_toroidal*tglf_q_loc_in/tglf_rmin_loc_in*rho_star(ir) !ky = n*q/(r/a)*rho_star
-  !ky_in = n_toroidal*0.1*tglf_zs_in(3)/sqrt(tglf_mass_in(3)*tglf_taus_in(3))
+  !ky_in = n_toroidal*0.1*tglf_zs_in(3)/sqrt(tglf_mass_in(3)*tglf_taus_in(3)) !ky_ep = 0.1*n
   freq_AE_upper = freq_cutoff/q_factor*omega_TAE(ir) !freq_cutoff*omega_TAE
-
-  tglf_dump_flag_in = .false.
   
 end subroutine EPGYRO_tglf_map
