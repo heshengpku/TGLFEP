@@ -16,7 +16,8 @@ subroutine TGLFEP_scalefactor
   implicit none
   integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
   integer :: i,n,k,imark
-  logical :: iexist
+  integer :: k_max = 4
+  logical :: iexist,write_out_flag = .false.
   real :: f0,f1,ft
   integer,parameter :: nfactor = 10
   real,dimension(nfactor) :: factor
@@ -36,7 +37,7 @@ subroutine TGLFEP_scalefactor
   f0 = 0.0
   f1 = factor_in
 
-  do k = 1,5
+  do k = 1,k_max
 
     do i = 1,nfactor
       factor(i) = (f1-f0)/nfactor*i+f0
@@ -71,7 +72,8 @@ subroutine TGLFEP_scalefactor
                       ,TGLFEP_COMM                     &
                       ,ierr)
 
-    if(id .eq. 0) then
+    !write_out_flag = .true.
+    if(write_out_flag .and. id .eq. 0) then
       inquire(file=trim('out.scalefactor'//suffix),exist=iexist)
       if(iexist) then
         open(unit=33,file=trim('out.scalefactor'//suffix),status='old',position='append')
@@ -79,7 +81,7 @@ subroutine TGLFEP_scalefactor
         open(unit=33,file=trim('out.scalefactor'//suffix),status='new')
       endif     
 
-      write(33,*) 'mode_flag ',mode_flag_in,'ky ',ky_in,'width ',width_in
+      write(33,*) 'mode_flag ',mode_in,'ky ',ky_in,'width ',width_in
       write(33,*)"factor,(gamma(n),freq(n),n=1,nmodes_in)"
       do i = 1,nfactor
         do n = 1,nmodes
@@ -113,11 +115,12 @@ subroutine TGLFEP_scalefactor
   if(imark .eq. 0) then
     factor_in = 10000. !NaN, no threshold found
   else
-    factor_in = factor(imark)
+    factor_in = factor(imark) !find the density threshold
   endif
-  if(id .eq. 0) then
-    print *, 'At',trim(suffix),' Scale Factor is ',factor_in,'with width = ',width_in,'ky = ',ky_in,'and freq = ',fmark
-  endif
+
+  ! if(write_out_flag .and. id .eq. 0) then
+  !   print *, 'At',trim(suffix),' Scale Factor is ',factor_in,'with width = ',width_in,'ky = ',ky_in,'and freq = ',fmark
+  ! endif
 
 10 format(F8.4,8F12.7)
 

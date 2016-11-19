@@ -18,11 +18,10 @@ subroutine TGLFEP_ky_widthscan
   logical :: iexist
   character(19) :: str_file
   integer :: i,n
-  integer,parameter :: nwidth=50
-  real :: width_min=0.8,width_max=1.29
-  real,dimension(nwidth) :: width
-  real,dimension(nwidth,nmodes) :: growthrate,growthrate_out &
-                                  ,frequency,frequency_out
+  integer :: nwidth
+  real,allocatable,dimension(:) :: width
+  real,allocatable,dimension(:,:) :: growthrate,growthrate_out &
+                                    ,frequency,frequency_out
   real :: w,g(nmodes),f(nmodes)
   logical :: find_max
   real :: gmark,fmark
@@ -30,13 +29,21 @@ subroutine TGLFEP_ky_widthscan
   call MPI_COMM_RANK(TGLFEP_COMM,id,ierr)
   call MPI_COMM_SIZE(TGLFEP_COMM,np,ierr)
 
+  nwidth = nint((width_max - width_min)/0.01)
+
+  allocate(width(nwidth))
+  allocate(growthrate(nwidth,nmodes))
+  allocate(growthrate_out(nwidth,nmodes))
+  allocate(frequency(nwidth,nmodes))
+  allocate(frequency_out(nwidth,nmodes))
+    
   growthrate     = 0.0
   growthrate_out = 0.0
   frequency      = 0.0
   frequency_out  = 0.0
-    
+
   do i = 1,nwidth
-    width(i) = (width_max - width_min)/(nwidth-1.)*(i-1.) + width_min
+    width(i) = width_min + 0.01*(i-1)
   enddo
 
   do i = 1+id,nwidth,np
@@ -70,15 +77,16 @@ subroutine TGLFEP_ky_widthscan
                     ,ierr)
 
   if(id .eq. 0) then
-    write(str_file,'(A18,I1)')'out.ky_widthscan_m',mode_flag_in
-    inquire(file=trim(str_file//suffix),exist=iexist)
-    if(iexist) then
-      open(unit=33,file=trim(str_file//suffix),status='old',position='append')
-    else
-      open(unit=33,file=trim(str_file//suffix),status='new')
-    endif
+    write(str_file,'(A18,I1)')'out.ky_widthscan_m',mode_in
+    open(unit=33,file=trim(str_file//suffix),status='replace')
+    ! inquire(file=trim(str_file//suffix),exist=iexist)
+    ! if(iexist) then
+    !   open(unit=33,file=trim(str_file//suffix),status='old',position='append')
+    ! else
+    !   open(unit=33,file=trim(str_file//suffix),status='new')
+    ! endif
 
-    write(33,*)"widthscan at ky =",ky_in,'mode_flag ',mode_flag_in,'factor ',factor_in
+    write(33,*)"widthscan at ky =",ky_in,'mode_flag ',mode_in,'factor ',factor_in
     write(33,*)"width,(gamma(n),freq(n),n=1,nmodes_in)"
     do i=1,nwidth
       w = width(i)
@@ -107,8 +115,14 @@ subroutine TGLFEP_ky_widthscan
         endif
       enddo
     enddo
-    !if(id .eq. 0) print *,ir,'Find the width = ',width_in,'for mode_flag ',mode_flag_in,', factor ',factor_in,', ky ',ky_in
+    !if(id .eq. 0) print *,ir,'Find the width = ',width_in,'for mode_flag ',mode_in,', factor ',factor_in,', ky ',ky_in
   endif
+
+  deallocate(width)
+  deallocate(growthrate)
+  deallocate(growthrate_out)
+  deallocate(frequency)
+  deallocate(frequency_out)
 
 10 format(F5.2,8F12.7)
 

@@ -25,8 +25,6 @@ subroutine TGLFEP_ky_nEPscan
   real :: g(nmodes),f(nmodes)
 
   do i = 1,nfactor
-    !factor(i) = real(i)/real(nfactor)
-    !factor(i) = 0.5*i/0.025*0.001
     factor(i) = real(i)/10.0
   enddo
 
@@ -39,15 +37,15 @@ subroutine TGLFEP_ky_nEPscan
   frequency_out  = 0.0
 
   do i = 1+id,nmode_flag*nfactor,np
-    mode_flag_in = (i-1)/nfactor+1
-    ifactor = i-(mode_flag_in-1)*nfactor
+    mode_in = (i-1)/nfactor+1
+    ifactor = i-(mode_in-1)*nfactor
     factor_in = factor(ifactor)
 
     call TGLFEP_ky
     
     do n = 1,nmodes
-      growthrate(mode_flag_in, ifactor, n) = get_growthrate(n)
-      frequency(mode_flag_in, ifactor, n)  = get_frequency(n)
+      growthrate(mode_in, ifactor, n) = get_growthrate(n)
+      frequency(mode_in, ifactor, n)  = get_frequency(n)
     enddo
 
   enddo
@@ -73,13 +71,13 @@ subroutine TGLFEP_ky_nEPscan
   if(id .eq. 0) then
     open(unit=33,file=trim('out.ky_nEPscan'//suffix),status='replace')
 
-    do mode_flag_in = 1,nmode_flag
-      write(33,*) 'mode_flag ',mode_flag_in,'ky ',ky_in,'width ',width_in
+    do mode_in = 1,nmode_flag
+      write(33,*) 'mode_flag ',mode_in,'ky ',ky_in,'width ',width_in
       write(33,*)"factor,(gamma(n),freq(n),n=1,nmodes_in)"
       do ifactor = 1,nfactor
         do n = 1,nmodes
-          g(n) = growthrate_out(mode_flag_in,ifactor,n)
-          f(n) = frequency_out(mode_flag_in,ifactor,n)
+          g(n) = growthrate_out(mode_in,ifactor,n)
+          f(n) = frequency_out(mode_in,ifactor,n)
         enddo
         write(33,10)factor(ifactor),(g(n),f(n),n=1,nmodes)
       enddo

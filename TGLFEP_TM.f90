@@ -5,12 +5,19 @@
 !  Calculate the growth rate and frequency spectra
 !  Print out the fluxes if needed
 !------------------------------------------------------------
+module ky_spectrumm
+
+  integer,parameter :: nky=30
+  real,parameter :: ky=0.15
+
+end module ky_spectrumm
 
 subroutine TGLFEP_TM
 
   use mpi
   use tglf_interface
   use TGLFEP_interface
+  use ky_spectrumm
 
   implicit none
   integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
@@ -24,8 +31,6 @@ subroutine TGLFEP_TM
   call TGLFEP_tglf_map
 
   tglf_use_transport_model_in = .true.
-
-  tglf_ns_in = ns
 
   tglf_kygrid_model_in = 0
   tglf_ky_in           = ky
@@ -63,17 +68,18 @@ subroutine write_eigenvalue_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
+  use ky_spectrumm
 
   implicit none
   character(17) :: str_file
   integer :: i,n
   real :: ky_out,growthrate_out(nmodes),frequency_out(nmodes)
    
-  write(str_file,'(A16,I1)')'out.eigenvalue_m',mode_flag_in
+  write(str_file,'(A16,I1)')'out.eigenvalue_m',mode_in
   open(unit=33,file=trim(str_file//suffix),status='replace')
 
   write(33,*)"gyro-bohm normalized eigenvalue spectra for mode_flag ",&
-              mode_flag_in,"factor ",factor_in,"width ",width_in
+              mode_in,"factor ",factor_in,"width ",width_in
   write(33,*)"ky,(gamma(n),freq(n),n=1,nmodes_in)"
   do i=1,nky
     ky_out = get_ky_spectrum_out(i)
@@ -94,6 +100,7 @@ subroutine write_flux_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
+  use ky_spectrumm
 
   implicit none
   character(11) :: str_file
@@ -103,10 +110,10 @@ subroutine write_flux_spectrum
   real :: pflux0,eflux0,pflux1,eflux1
   real :: pflux_out,eflux_out
 
-  write(str_file,'(A10,I1)')'out.flux_m',mode_flag_in
+  write(str_file,'(A10,I1)')'out.flux_m',mode_in
   open(unit=33,file=trim(str_file//suffix),status='replace')
 
-  do is=1,ns
+  do is=1,3
     do j=1,2
       write(33,*)"species = ",is,"field =",j
       write(33,*)"ky,particle flux,energy flux"
@@ -153,13 +160,14 @@ subroutine write_potential_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
+  use ky_spectrumm
 
   implicit none
   character(16) :: str_file
   integer :: i,n
   real :: phi
 
-  write(str_file,'(A15,I1)')'out.potential_m',mode_flag_in
+  write(str_file,'(A15,I1)')'out.potential_m',mode_in
   open(unit=33,file=trim(str_file//suffix),status='replace')
 
   write(33,*)"gyro-bohm normalized potential fluctuation amplitude spectra"

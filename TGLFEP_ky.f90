@@ -11,13 +11,21 @@ subroutine TGLFEP_ky
   use TGLFEP_interface
 
   implicit none
+  logical :: iexist
 
   call TGLFEP_tglf_map
 
   tglf_use_transport_model_in = .false.
-  !tglf_write_wavefunction_flag_in = 1
 
-  tglf_ns_in = ns
+  if(process_in .eq. 0) then
+    inquire(file='input.ky',exist=iexist)
+    if(iexist) then
+      open(unit=33,file='input.ky',status='old')
+      read(33,*) ky_in
+    endif
+    
+    tglf_write_wavefunction_flag_in = 1
+  endif
 
   tglf_kygrid_model_in = 0
   tglf_ky_in           = ky_in
