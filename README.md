@@ -1,27 +1,17 @@
 # TGLFEP
-`TGLF` code called for EP simulations
+`TGLF` code called for EP linear simulations
 
 ---
 
 `TGLFEP` code is a program 
-to run `TGLF` with EP conveniently, 
-where uses `TGLF` (in `GAcode`) 
+to run `TGLF` with 
+EP linear simulations conveniently, 
+where using `TGLF` (inside `GAcode`) 
 with the version number 
 (on May 7th, 2016) 
 ''TGLF stable\_r6.0.0-31-gba49'' 
 on NERSC ''EDISON\_CRAY Linux x86\_64'' 
 or '' CORI Linux x86\_64''
-
-`TGLFEP` source files list as below
-* TGLFEP_interface.f90
-* TGLFEP_tglf_map.f90
-* TGLFEP_ky.f90
-* TGLFEP_TM.f90
-* TGLFEP_ky_widthscan.f90
-* TGLFEP_ky_nEPscan.f90
-* TGLFEP_scalefactor.f90
-* TGLFEP_mainsub.f90
-* TGLFEP_driver.f90
 
 `TGLFEP_interface.f90` contains 
 the module of internal parameters
@@ -32,54 +22,94 @@ the module of input profiles
 and the subroutine to
 read plasma and geometry profiles
 from input file `input.profile`
-and then map them to `TGLF` 
-as the required format.
+as well as the subroutine 
+to map the parameters to `TGLF` 
+in the required formats.
 
-## Input
-Four input profiles (`input.profile`) have been tested: 
+`TGLFEP_driver.f90` will read 
+the control parameters 
+from input file `input.TGLFEP`. 
+
+The other subroutines contain 
+different processes for 
+different simulation scheme.
+
+### Input: profiles
+Four different example profiles have been tested: 
 `GA-std case`, 
 `DIII-D NBI case` (with GYRO inputs), 
 `EPtran profiles`,
 `Two EP species case`.
 
-## Process
-The input parameter `process_in` is
-used in `mainsub` subroutine 
-to clarify several different simulation scheme:
-* `0:` `TGLFEP_ky` to get the modes' wavefunction 
-at a given ky (`input.ky`);
-* `1:` `TGLFEP_TM` to get growth rate and frequency spectra 
-with a ky spectrum 
-(![](http://latex.codecogs.com/gif.latex? 0 < k_y \\leq 0.15,\\Delta k_y = 0.01));
-* `2:` `TGLFEP_ky_nEPscan` to get growth rate and frequency 
-versus ![](http://latex.codecogs.com/gif.latex? n_{EP}) 
-at a single ky;
-* `3:` (**Recommend**) to get growth rate and frequency spectra 
-(and/or the growth rate versus ![](http://latex.codecogs.com/gif.latex? n_{EP})). 
-It can run with a given `WIDTH` 
-or find a suitable `WIDTH` in a given range 
-(set in `input.TGLFEP`);
-* `4:` (**Recommend**) to find the density threshold of 
-![](http://latex.codecogs.com/gif.latex? \\gamma_{AE}=0) 
-for multiple toroidal n (equivalently ky) 
-to get a minimum density threshold 
-or for a series ![](http://latex.codecogs.com/gif.latex? a/L_{n_{EP}}) 
-to calculate ![](http://latex.codecogs.com/gif.latex? C_R), 
-with a given `WIDTH` 
-or find a suitable `WIDTH` in a given range 
-(set in `input.TGLFEP`).
+The existed `input.profile` is 
+the example profiles for 
+the DIII-D NBI case 
+with 50 radii (r/a = 0.0  excluded), 
+which are calculated by EPtran code. 
 
-## Parametric scan
-`TGLFEP` use `MPI` to do
-radial scan (`ir`), 
-safety factor q scan (`q_factor`), 
-shear s scan (`shat_factor`), 
-EP density gradient scan (`scan_factor`), 
-or other parametric scan 
-but needed to revise the source file `TGLFEP_tglf_map.f90`.
+### Input: control parameters
+The control parameters of TGLFEP code 
+are read from file `input.TGLFEP`.
+
+The existed `input.TGLFEP` has been set 
+to get the EP critical beta for 
+the inner 40 radii. 
+The outputs are in the file `out.density_threshold`. 
+For the outside 10 radii, 
+save the above output file at first 
+and just change `40 SCAN_N` to `10 SCAN_N`, 
+`1 IRS` to `41 IRS`, 
+and `4.0 FACTOR_IN`  to `8.0 FACTOR_IN` 
+in `input.TGLFEP` file. 
+Then run TGLFEP again. 
+
+`SCAN_N` is the amout of radii to calculate 
+(don't have to be the same with the total number of radii, 
+but should be less or equal to that). 
+`IRS` is the starting radius.
+
+`FACTOR_IN` indicates 
+the upper boundary 
+of the EP density scale. 
+If the input EP density cannot drive AE modes, 
+a larger FACTOR\_IN > 1.0 (up to 2., 10., or even 100.) 
+should be used.
+
+### EP critical beta of New cases
+When you want to run a new case with TGLFEP, 
+for example still the DIII-D NBI case 
+but with different profiles. 
+- At first, 
+you should generate a new `input.profile` 
+based on your plasma and geometry profiles 
+in the TGLF formats. 
+- Then try to run TGLFEP code and 
+get the new `out.density_threshold` 
+output file. 
+- Check the outputs. 
+If at some radii, 
+EP critical beta are not found 
+(that is, `SFmin` shows NOT correctly 
+in `out.density_threshold`), 
+you need to change `FACTOR_IN` to a larger value 
+and try for these radii again. 
+
+By the way, 
+however it is possible that 
+for some cases, 
+the EP critical beta doesn't exist and
+surely cannot be found 
+even if with a very large `FACTOR_IN`.
+
+### CPUs
+**Recommend** to use 25x`SCAN_N` CPUs (or more) 
+to run these cases. 
+It usually costs about 20 mimutes 
+on `Cori` (using ceil(25x`SCAN_N` /32) nodes) 
+or on `Edison` (using ceil(25x`SCAN_N` /24) nodes).
 
 ---
 
-> [More introductions on TGLF input](https://fusion.gat.com/theory/Tglfinput)
+> [More introductions on TGLF input formats](https://fusion.gat.com/theory/Tglfinput)
 
 > The `p_prime` in `TGLF` is usually negative and should use the total pressure including the EP species.

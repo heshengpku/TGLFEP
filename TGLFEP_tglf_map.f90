@@ -15,6 +15,8 @@ module TGLFEP_profile
                                    zeff,betae,     &
                                    rho_star,omega_TAE
 
+  integer :: is !energetic particle species (density scan)
+
 end module TGLFEP_profile
 
 subroutine TGLFEP_tglf_map 
@@ -26,7 +28,6 @@ subroutine TGLFEP_tglf_map
   implicit none
 
   integer :: i
-  integer :: is !energetic particle species (density scan)
   real :: sum0,sum1
 
   if(ir .lt. 1 .or. ir .gt. nr) then
@@ -161,7 +162,7 @@ subroutine TGLFEP_tglf_map
   case(1)
     ky_in = n_toroidal*tglf_q_loc_in/tglf_rmin_loc_in*rho_star(ir) !ky = n*q/(r/a)*rho_star
   case default
-    ky_in = n_toroidal*0.1*tglf_zs_in(is)/sqrt(tglf_mass_in(is)*tglf_taus_in(ir)) !ky_ep = 0.1*n
+    ky_in = n_toroidal*0.1*tglf_zs_in(is)/sqrt(tglf_mass_in(is)*tglf_taus_in(is)) !ky_ep = 0.1*n
   end select
 
   freq_AE_upper = freq_cutoff*abs(omega_TAE(ir))/q_factor !freq_cutoff*omega_TAE

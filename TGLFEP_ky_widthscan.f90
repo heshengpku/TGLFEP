@@ -15,7 +15,7 @@ subroutine TGLFEP_ky_widthscan
 
   implicit none
   integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
-  logical :: iexist
+  logical :: iexist, write_out_flag = .false.
   character(19) :: str_file
   integer :: i,n
   integer :: nwidth
@@ -76,7 +76,7 @@ subroutine TGLFEP_ky_widthscan
                     ,TGLFEP_COMM                     &
                     ,ierr)
 
-  if(id .eq. 0) then
+  if(write_out_flag .and. id .eq. 0) then
     write(str_file,'(A18,I1)')'out.ky_widthscan_m',mode_in
     open(unit=33,file=trim(str_file//suffix),status='replace')
     ! inquire(file=trim(str_file//suffix),exist=iexist)

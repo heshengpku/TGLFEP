@@ -9,6 +9,7 @@ program TGLFEP_driver
 
   use mpi
   use TGLFEP_interface
+  use TGLFEP_profile
 
   !---------------------------------------------------------------
   implicit none
@@ -22,9 +23,9 @@ program TGLFEP_driver
                                      !3 = EP density gradient scan (or other scan)
   integer :: scan_n = 1 !q scan = 13, shat scan = 9 for GA-std case
                         !radial scan for DIII-D NBI (GYRO inputs) = 17
-                        !radial scan for EPtran = 50 (start at irs = 2, r/a = 0 excluded)
+                        !radial scan for EPtran = 50 (r/a = 0 excluded)
   integer :: i,ii,irs
-  real,allocatable,dimension(:) :: scan_p, factor, width, kymark_out
+  real,allocatable,dimension(:) :: scan_p, factor, width, kymark_out, SFmin
   character(2) :: str_r
 
   call MPI_INIT(ierr)
@@ -50,6 +51,7 @@ program TGLFEP_driver
         read(33,*) irs
       else
         read(33,*) ir
+        irs = ir
         read(33,*) scan_n
 
         allocate(scan_p(scan_n))
@@ -83,6 +85,7 @@ program TGLFEP_driver
       endif
     else
       read(33,*) ir
+      irs = ir
 
       allocate(factor(1))
 
@@ -247,24 +250,99 @@ program TGLFEP_driver
       open(unit=33,file='out.density_threshold',status='replace')
       write(33,*)'scan_parameter_flag =',scan_parameter_flag,' scan_n =',scan_n
 
-      write(33,*) 'SFmin'
-      write(33,10) factor_in
-      do i = 1,scan_n-1
-        call MPI_RECV(factor_in,1,MPI_DOUBLE_PRECISION,i,i,MPI_COMM_WORLD,STATUS,ierr)
-        write(33,10) factor_in
-      enddo
+      allocate(SFmin(scan_n))
 
-      write(33,*) '--------------------------------------------------------------'
-      write(33,*) 'At each n:'
-      write(33,*) (factor_out(ii),ii=1,nn)
-      do i = 1,scan_n-1
-        call MPI_RECV(factor_out,nn,MPI_DOUBLE_PRECISION,i,i+scan_n,MPI_COMM_WORLD,STATUS,ierr)
+      if(threshold_flag .eq. 0) then
+
+        SFmin(1) = factor_in
+        do i = 1,scan_n-1
+          call MPI_RECV(factor_in,1,MPI_DOUBLE_PRECISION,i,i,MPI_COMM_WORLD,STATUS,ierr)
+          SFmin(i+1) = factor_in
+        enddo
+
+        write(33,*) '--------------------------------------------------------------'
+        write(33,*) 'SFmin'
+        write(33,10) SFmin
+
+        if(scan_parameter_flag .eq. 0) then
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'r/a'
+          do i = 1,scan_n
+            write(33,10) rmin(irs+i-1)
+          enddo
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'The EP density threshold n_EP/n_e (%) for gamma_AE = 0'
+          do i = 1,scan_n
+            write(33,10) SFmin(i)*as(irs+i-1,is)*100. !percent
+          enddo
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)'
+          do i = 1,scan_n
+            if(geometry_flag .eq. 0) then
+              write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is) !percent
+            else
+              write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is)*kappa(irs+i-1)**2 !percent
+            endif
+          enddo
+
+        else
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'scan parameter value'
+          do i = 1,scan_n
+            write(33,10) scan_p(i)
+          enddo
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'The EP density threshold n_EP/n_e (%) for gamma_AE = 0'
+          do i = 1,scan_n
+            write(33,10) SFmin(i)*as(irs,is)*100. !percent
+          enddo
+
+          write(33,*) '--------------------------------------------------------------'
+          write(33,*) 'The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)'
+          do i = 1,scan_n
+            if(geometry_flag .eq. 0) then
+              write(33,10) SFmin(i)*betae(irs)*100.*as(irs,is)*taus(irs,is) !percent
+            else
+              write(33,10) SFmin(i)*betae(irs)*100.*as(irs,is)*taus(irs,is)*kappa(irs)**2 !percent
+            endif
+          enddo
+
+        endif
+
+        deallocate(SFmin)
+
+        write(33,*) '--------------------------------------------------------------'
+        write(33,*) 'The scale factor for EP density threshold at each n:'
         write(33,*) (factor_out(ii),ii=1,nn)
-      enddo
+        do i = 1,scan_n-1
+          call MPI_RECV(factor_out,nn,MPI_DOUBLE_PRECISION,i,i+scan_n,MPI_COMM_WORLD,STATUS,ierr)
+          write(33,*) (factor_out(ii),ii=1,nn)
+        enddo
+
+      else
+
+        write(33,*) '--------------------------------------------------------------'
+        write(33,*) 'a/Ln_EP multiplied by: 0.1, 0.2, ..., 1.5'
+        write(33,*) 'The scale factor for EP density threshold:'
+        write(33,*) (factor_out(ii),ii=1,nn)
+        do i = 1,scan_n-1
+          call MPI_RECV(factor_out,nn,MPI_DOUBLE_PRECISION,i,i+scan_n,MPI_COMM_WORLD,STATUS,ierr)
+          write(33,*) (factor_out(ii),ii=1,nn)
+        enddo
+
+      endif
 
       close(33)
     else if(id .lt. scan_n) then
-      call MPI_SEND(factor_in,1,MPI_DOUBLE_PRECISION,0,id,MPI_COMM_WORLD,STATUS,ierr)
+      if(threshold_flag .eq. 0) then
+        call MPI_SEND(factor_in,1,MPI_DOUBLE_PRECISION,0,id,MPI_COMM_WORLD,STATUS,ierr)
+      endif
+
       call MPI_SEND(factor_out,nn,MPI_DOUBLE_PRECISION,0,id+scan_n,MPI_COMM_WORLD,STATUS,ierr)
     endif
   endif
