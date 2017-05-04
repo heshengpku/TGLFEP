@@ -18,14 +18,10 @@ program TGLFEP_driver
   integer :: id, np, color, key, ierr, STATUS(MPI_STATUS_SIZE)
   integer :: TGLFEP_COMM_IN
 
-  logical :: iexist, scan_flag, factor_in_profile
-  integer :: scan_parameter_flag = 0 !0 = radial, 1 = safety factor q, 2 = shear s, 
-                                     !3 = EP density gradient scan (or other scan)
-  integer :: scan_n = 1 !q scan = 13, shat scan = 9 for GA-std case
-                        !radial scan for DIII-D NBI (GYRO inputs) = 17
-                        !radial scan for EPtran = 50 (r/a = 0 excluded)
+  logical :: iexist, factor_in_profile
+  integer :: scan_n = 1
   integer :: i,ii,irs
-  real,allocatable,dimension(:) :: scan_p, factor, width, kymark_out, SFmin
+  real,allocatable,dimension(:) :: factor, width, kymark_out, SFmin
   character(2) :: str_r
 
   call MPI_INIT(ierr)
@@ -43,62 +39,31 @@ program TGLFEP_driver
 
     read(33,'(I1)') ky_model
 
-    read(33,*) scan_flag
-    if(scan_flag) then
-      read(33,'(I1)') scan_parameter_flag
-      if(scan_parameter_flag .eq. 0) then
-        read(33,*) scan_n
-        read(33,*) irs
-      else
-        read(33,*) ir
-        irs = ir
-        read(33,*) scan_n
+    read(33,*) scan_n
+    read(33,*) irs
 
-        allocate(scan_p(scan_n))
-        do i = 1,scan_n
-          read(33,*) scan_p(i)
-        enddo
-      endif
-
-      read(33,*) factor_in_profile
-      allocate(factor(scan_n))
-      if(factor_in_profile) then
-        do i = 1,scan_n
-          read(33,*) factor(i)
-        enddo
-      else
-        read(33,*) factor_in
-        factor(:) = factor_in
-      endif
-
-      read(33,*) width_in_flag
-      allocate(width(scan_n))
-      allocate(kymark_out(scan_n))
-      if(width_in_flag) then
-        do i = 1,scan_n
-          read(33,*) width(i)
-        enddo
-      else
-        width = 0.00
-        read(33,*) width_min
-        read(33,*) width_max
-      endif
+    read(33,*) factor_in_profile
+    allocate(factor(scan_n))
+    if(factor_in_profile) then
+      do i = 1,scan_n
+        read(33,*) factor(i)
+      enddo
     else
-      read(33,*) ir
-      irs = ir
-
-      allocate(factor(1))
-
       read(33,*) factor_in
-      factor(1) = factor_in
+      factor(:) = factor_in
+    endif
 
-      read(33,*) width_in_flag
-      if(width_in_flag) then
-        read(33,*) width_in
-      else
-        read(33,*) width_min
-        read(33,*) width_max
-      endif
+    read(33,*) width_in_flag
+    allocate(width(scan_n))
+    allocate(kymark_out(scan_n))
+    if(width_in_flag) then
+      do i = 1,scan_n
+        read(33,*) width(i)
+      enddo
+    else
+      width = 0.00
+      read(33,*) width_min
+      read(33,*) width_max
     endif
 
     close(33)
@@ -125,41 +90,21 @@ program TGLFEP_driver
   endif
 
   !run mainsub
-  if(scan_flag) then
+  key = id / (scan_n)
+  color = id - key*(scan_n)
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD,color,key,TGLFEP_COMM_IN,ierr)
 
-    key = id / (scan_n)
-    color = id - key*(scan_n)
-    call MPI_COMM_SPLIT(MPI_COMM_WORLD,color,key,TGLFEP_COMM_IN,ierr)
+  ir = color + irs
+  str_r = achar(ir/10+iachar("0"))//achar(mod(ir,10)+iachar("0"))
+  write(suffix,'(A2,A2)')'_r',str_r
 
-    select case(scan_parameter_flag)
-    case(0)
-      ir = color + irs
-      str_r = achar(ir/10+iachar("0"))//achar(mod(ir,10)+iachar("0"))
-      write(suffix,'(A2,A2)')'_r',str_r
-    case(1)
-      q_factor = scan_p(color+1)
-    case(2)
-      shat_factor = scan_p(color+1)
-    case(3)
-      scan_factor = scan_p(color+1)
-    end select
-
-    if(scan_parameter_flag .gt. 0) then
-      str_r = achar((color+1)/10+iachar("0"))//achar(mod(color+1,10)+iachar("0"))
-      write(suffix,'(A2,A2)')'_s',str_r
-    endif
-
-    factor_in = factor(color+1)
-    if(width_in_flag) width_in = width(color+1)
-
-  else
-    TGLFEP_COMM_IN = MPI_COMM_WORLD
-  endif
+  factor_in = factor(color+1)
+  if(width_in_flag) width_in = width(color+1)
 
   call TGLFEP_mainsub(TGLFEP_COMM_IN)
 
   !write output
-  if(scan_flag .and. .not. width_in_flag) then !get width_out and kymark_out
+  if(.not. width_in_flag) then !get width_out and kymark_out
     if(id .eq. 0) then
       width(1) = width_in
       kymark_out(1) = kymark
@@ -184,59 +129,28 @@ program TGLFEP_driver
     write(33,*) 'ky_model = ',ky_model
 
     write(33,*) '--------------------------------------------------------------'
-    write(33,*) 'scan_flag = ',scan_flag
-    if(scan_flag) then
-      write(33,*) 'scan_parameter_flag = ',scan_parameter_flag
-      if(scan_parameter_flag .eq. 0) then
-        write(33,*) 'scan_n = ',scan_n
-        write(33,*) 'irs = ',irs
+    write(33,*) 'scan_n = ',scan_n
+    write(33,*) 'irs = ',irs
 
-        if(width_in_flag) then
-          write(33,*) 'ir,  width'
-          do i = 1,scan_n
-            write(33,'(I3,F8.2)') irs+i-1,width(i)
-          enddo
-        else
-          write(33,*) 'ir,  width,  kymark'
-          do i = 1,scan_n
-            write(33,'(I3,F8.2,F9.3)') irs+i-1,width(i),kymark_out(i)
-          enddo
-        endif
-
-      else
-        write(33,*) 'ir = ',ir
-        write(33,*) 'scan_n = ',scan_n
-
-        if(width_in_flag) then
-          write(33,*) 'scan parameter values,  width'
-          do i = 1,scan_n
-            write(33,'(F6.3,F8.2)') scan_p(i),width(i)
-          enddo
-        else
-          write(33,*) 'scan parameter values,  width,  kymark'
-          do i = 1,scan_n
-            write(33,'(F6.3,F8.2,F9.3,F8.2)') scan_p(i),width(i),kymark_out(i)
-          enddo
-        endif
-
-      endif
-
-      write(33,*) '--------------------------------------------------------------'
-      write(33,*) 'factor_in_profile = ',factor_in_profile
-      if(factor_in_profile) then
-        do i = 1,scan_n
-          write(33,'(F7.2)') factor(i)
-        enddo
-      else
-        write(33,*) 'factor_in = ',factor(1)
-      endif
-
+    if(width_in_flag) then
+      write(33,*) 'ir,  width'
+      do i = 1,scan_n
+        write(33,'(I3,F8.2)') irs+i-1,width(i)
+      enddo
     else
-      write(33,*) 'ir = ',ir
-      write(33,*) 'width = ',width_in
-      write(33,*) 'kymark = ',kymark
+      write(33,*) 'ir,  width,  kymark'
+      do i = 1,scan_n
+        write(33,'(I3,F8.2,F9.3)') irs+i-1,width(i),kymark_out(i)
+      enddo
+    endif
 
-      write(33,*) '--------------------------------------------------------------'
+    write(33,*) '--------------------------------------------------------------'
+    write(33,*) 'factor_in_profile = ',factor_in_profile
+    if(factor_in_profile) then
+      do i = 1,scan_n
+        write(33,'(F7.2)') factor(i)
+      enddo
+    else
       write(33,*) 'factor_in = ',factor(1)
     endif
 
@@ -247,8 +161,10 @@ program TGLFEP_driver
 
   if(process_in .eq. 4) then !print out 'density threshold'
     if(id .eq. 0) then
-      open(unit=33,file='out.density_threshold',status='replace')
-      write(33,*)'scan_parameter_flag =',scan_parameter_flag,' scan_n =',scan_n
+      open(unit=33,file='out.TGLFEP',status='old',position='append')
+      write(33,*) '**************************************************************'
+      write(33,*) '************** The critical EP density gradient **************'
+      write(33,*) '**************************************************************'
 
       allocate(SFmin(scan_n))
 
@@ -264,55 +180,21 @@ program TGLFEP_driver
         write(33,*) 'SFmin'
         write(33,10) SFmin
 
-        if(scan_parameter_flag .eq. 0) then
+        write(33,*) '--------------------------------------------------------------'
+        write(33,*) 'The EP density threshold n_EP/n_e (%) for gamma_AE = 0'
+        do i = 1,scan_n
+          write(33,10) SFmin(i)*as(irs+i-1,is)*100. !percent
+        enddo
 
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'r/a'
-          do i = 1,scan_n
-            write(33,10) rmin(irs+i-1)
-          enddo
-
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'The EP density threshold n_EP/n_e (%) for gamma_AE = 0'
-          do i = 1,scan_n
-            write(33,10) SFmin(i)*as(irs+i-1,is)*100. !percent
-          enddo
-
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)'
-          do i = 1,scan_n
-            if(geometry_flag .eq. 0) then
-              write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is) !percent
-            else
-              write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is)*kappa(irs+i-1)**2 !percent
-            endif
-          enddo
-
-        else
-
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'scan parameter value'
-          do i = 1,scan_n
-            write(33,10) scan_p(i)
-          enddo
-
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'The EP density threshold n_EP/n_e (%) for gamma_AE = 0'
-          do i = 1,scan_n
-            write(33,10) SFmin(i)*as(irs,is)*100. !percent
-          enddo
-
-          write(33,*) '--------------------------------------------------------------'
-          write(33,*) 'The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)'
-          do i = 1,scan_n
-            if(geometry_flag .eq. 0) then
-              write(33,10) SFmin(i)*betae(irs)*100.*as(irs,is)*taus(irs,is) !percent
-            else
-              write(33,10) SFmin(i)*betae(irs)*100.*as(irs,is)*taus(irs,is)*kappa(irs)**2 !percent
-            endif
-          enddo
-
-        endif
+        write(33,*) '--------------------------------------------------------------'
+        write(33,*) 'The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)'
+        do i = 1,scan_n
+          if(geometry_flag .eq. 0) then
+            write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is) !percent
+          else
+            write(33,10) SFmin(i)*betae(irs+i-1)*100.*as(irs+i-1,is)*taus(irs+i-1,is)*kappa(irs+i-1)**2 !percent
+          endif
+        enddo
 
         deallocate(SFmin)
 
@@ -348,11 +230,8 @@ program TGLFEP_driver
   endif
 
   if(process_in .eq. 4) deallocate(factor_out)
-  if(scan_flag) then
-    if(scan_parameter_flag .gt. 0) deallocate(scan_p)
-    deallocate(width)
-    deallocate(kymark_out)
-  endif
+  deallocate(width)
+  deallocate(kymark_out)
   deallocate(factor)
 
   ! if(id .eq. 0) call dump_profile

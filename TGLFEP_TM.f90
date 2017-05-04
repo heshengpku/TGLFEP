@@ -52,7 +52,7 @@ subroutine TGLFEP_TM
     call write_eigenvalue_spectrum
 
     if(write_flux_flag) then
-      print *,scan_factor&
+      print *,ir&
              ,tglf_elec_pflux_out,tglf_ion_pflux_out(1),tglf_ion_pflux_out(2)&
              ,tglf_elec_eflux_out,tglf_ion_eflux_out(1),tglf_ion_eflux_out(2)
       call write_flux_spectrum

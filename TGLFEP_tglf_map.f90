@@ -109,8 +109,8 @@ subroutine TGLFEP_tglf_map
     ! s-alpha
     tglf_rmin_sa_in     = rmin(ir)
     tglf_rmaj_sa_in     = rmaj(ir)
-    tglf_q_sa_in        = q(ir)*q_factor
-    tglf_shat_sa_in     = shear(ir)*shat_factor
+    tglf_q_sa_in        = q(ir)
+    tglf_shat_sa_in     = shear(ir)
     tglf_alpha_sa_in    = alpha(ir)
     tglf_xwell_sa_in    = 0.0
     tglf_theta0_sa_in   = 0.0
@@ -130,8 +130,8 @@ subroutine TGLFEP_tglf_map
     tglf_s_delta_loc_in = s_delta(ir)
     tglf_zeta_loc_in    = zeta(ir)
     tglf_s_zeta_loc_in  = s_zeta(ir)
-    tglf_q_loc_in       = abs(q(ir))*q_factor
-    tglf_q_prime_loc_in = q_prime(ir)*q_factor**2.0*shat_factor
+    tglf_q_loc_in       = abs(q(ir))
+    tglf_q_prime_loc_in = q_prime(ir)
 
     sum0 = 0.
     do i = 1,ns
@@ -141,7 +141,7 @@ subroutine TGLFEP_tglf_map
     do i = 1,ns
       sum1 = sum1 + as(ir,i)*taus(ir,i)*(rlns(ir,i)+rlts(ir,i))
     enddo
-    tglf_p_prime_loc_in = p_prime(ir)*q_factor*sum0/sum1
+    tglf_p_prime_loc_in = p_prime(ir)*sum0/sum1
     ! It is usually negative comfirmed by Gary 7.13.2016
   endif
   !----------------------------------------------------------------
@@ -165,7 +165,7 @@ subroutine TGLFEP_tglf_map
     ky_in = n_toroidal*0.1*tglf_zs_in(is)/sqrt(tglf_mass_in(is)*tglf_taus_in(is)) !ky_ep = 0.1*n
   end select
 
-  freq_AE_upper = freq_cutoff*abs(omega_TAE(ir))/q_factor !freq_cutoff*omega_TAE
+  freq_AE_upper = freq_cutoff*abs(omega_TAE(ir)) !freq_cutoff*omega_TAE
   
 end subroutine TGLFEP_tglf_map
 
@@ -345,12 +345,22 @@ subroutine read_input_profile
       read(33,*) betae(i)
     enddo
     read(33,*)
+    !As Gary Staebler suggested, change rho_star to ky1 (n=1)
     do i = 1,nr
       read(33,*) rho_star(i)
     enddo
-    read(33,*)
+    !ky = (nq/r)*rhos
     do i = 1,nr
-      read(33,*) omega_TAE(i)
+      rho_star(i) = rho_star(i)/q(i)*rmin(i)
+    enddo
+    !read(33,*)
+    ! do i = 1,nr
+    !   read(33,*) omega_TAE(i)
+    ! enddo
+    !omega_TAE don't need to read from file, 4.24.2017
+    !since omega_TAE/(c_s/a) = sqrt(2/beta_e)/2/q/(R/a)
+    do i = 1,nr
+      omega_TAE(i) = (2./betae(i))**0.5/2./q(i)/rmaj(i)
     enddo
 
     close(33)
@@ -450,8 +460,9 @@ subroutine dump_profile
   write(33,10) zeff
   write(33,*) '# betae'
   write(33,10) betae
-  write(33,*) '# rho_star = rho_s/a'
-  write(33,10) rho_star
+  !write(33,*) '# rho_star = rho_s/a'
+  write(33,*) '# ky = (nq/r)*rho_s for n = 1'
+  write(33,10) rho_star*q/rmin
   write(33,*) '# omega_TAE / (c_s/a)'
   write(33,10) omega_TAE
 

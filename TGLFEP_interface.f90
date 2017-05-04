@@ -18,11 +18,11 @@ module TGLFEP_interface
 
   integer :: mode_in
   logical :: width_in_flag
-  real :: width_in, width_min,width_max
+  real :: width_in, width_min, width_max
   real :: factor_in, factor_max, ky_in, kymark
 
-  integer :: ir, n_toroidal,ky_model
-  real :: q_factor = 1.0, shat_factor = 1.0, scan_factor = 1.0
+  integer :: ir, n_toroidal, ky_model
+  real :: scan_factor = 1.0
 
   real,parameter :: freq_cutoff = -0.2
   real :: freq_AE_upper

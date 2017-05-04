@@ -1,17 +1,17 @@
 # TGLFEP
-`TGLF` code called for EP linear simulations
+`TGLF` code called for EP driven local linear AE simulations
 
 ---
 
 `TGLFEP` code is a program 
 to run `TGLF` with 
-EP linear simulations conveniently, 
-where using `TGLF` (inside `GAcode`) 
+energetic paritcle (EP) conveniently, 
+where using the code `TGLF` (inside `GAcode`) 
 with the version number 
 (on May 7th, 2016) 
 ''TGLF stable\_r6.0.0-31-gba49'' 
 on NERSC ''EDISON\_CRAY Linux x86\_64'' 
-or '' CORI Linux x86\_64''
+or '' CORI Linux x86\_64''.
 
 `TGLFEP_interface.f90` contains 
 the module of internal parameters
@@ -54,7 +54,7 @@ are read from file `input.TGLFEP`.
 The existed `input.TGLFEP` has been set 
 to get the EP critical beta for 
 the inner 40 radii. 
-The outputs are in the file `out.density_threshold`. 
+The outputs are in the file `out.TGLFEP`. 
 For the outside 10 radii, 
 save the above output file at first 
 and just change `40 SCAN_N` to `10 SCAN_N`, 
@@ -84,14 +84,14 @@ you should generate a new `input.profile`
 based on your plasma and geometry profiles 
 in the TGLF formats. 
 - Then try to run TGLFEP code and 
-get the new `out.density_threshold` 
-output file. 
+get the new output file. 
 - Check the outputs. 
 If at some radii, 
 EP critical beta are not found 
 (that is, `SFmin` shows NOT correctly 
-in `out.density_threshold`), 
-you need to change `FACTOR_IN` to a larger value 
+in `out.TGLFEP`), 
+you need to change `FACTOR_IN` in `input.TGLFEP`
+to a larger value 
 and try for these radii again. 
 
 By the way, 

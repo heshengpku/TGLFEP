@@ -22,6 +22,10 @@ subroutine TGLFEP_ky
     if(iexist) then
       open(unit=33,file='input.ky',status='old')
       read(33,*) ky_in
+      close(33)
+    else
+      print *, 'input.ky file not found'
+      stop
     endif
     
     tglf_write_wavefunction_flag_in = 1
