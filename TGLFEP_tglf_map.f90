@@ -463,8 +463,8 @@ subroutine dump_profile
   !write(33,*) '# rho_star = rho_s/a'
   write(33,*) '# ky = (nq/r)*rho_s for n = 1'
   write(33,10) rho_star*q/rmin
-  write(33,*) '# omega_TAE / (c_s/a)'
-  write(33,10) omega_TAE
+  !write(33,*) '# omega_TAE / (c_s/a)'
+  !write(33,10) omega_TAE
 
   close(33)
 

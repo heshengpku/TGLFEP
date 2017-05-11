@@ -157,6 +157,8 @@ program TGLFEP_driver
     write(33,*) 'width_in_flag = ',width_in_flag
     if(.not. width_in_flag) write(33,*) 'width_min = ',width_min,'width_max = ',width_max
 
+    close(33)
+
   endif
 
   if(process_in .eq. 4) then !print out 'density threshold'
